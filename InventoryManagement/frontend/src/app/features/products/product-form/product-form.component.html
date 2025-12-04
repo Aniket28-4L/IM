@@ -1,0 +1,82 @@
+<div class="space-y-4">
+  <h1 class="page-title">{{ isEditMode ? 'Edit Product' : 'Add Product' }}</h1>
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card p-4 space-y-4">
+      <div>
+        <label class="label">Name <span class="text-red-500">*</span></label>
+        <input class="input" formControlName="name" required />
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="label">SKU <span class="text-red-500">*</span></label>
+          <input class="input" formControlName="sku" required />
+        </div>
+        <div>
+          <label class="label">Barcode</label>
+          <input class="input" formControlName="barcode" />
+        </div>
+        <div>
+          <label class="label">UOM</label>
+          <input class="input" formControlName="uom" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="label">Category</label>
+          <select class="input" formControlName="category" [disabled]="catalogLoading">
+            <option value="">Select category</option>
+            <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="label">Brand</label>
+          <select class="input" formControlName="brand" [disabled]="catalogLoading">
+            <option value="">Select brand</option>
+            <option *ngFor="let br of brands" [value]="br.id">{{ br.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="label">Variant</label>
+          <select class="input" formControlName="variant" [disabled]="catalogLoading">
+            <option value="">Select variant</option>
+            <option *ngFor="let variant of variants" [value]="variant.id">{{ variant.name }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="label">Cost</label>
+          <input class="input" type="number" step="0.01" formControlName="cost" />
+        </div>
+        <div>
+          <label class="label">Price</label>
+          <input class="input" type="number" step="0.01" formControlName="price" />
+        </div>
+      </div>
+      <div>
+        <label class="label">Description</label>
+        <textarea class="input min-h-[100px]" formControlName="description"></textarea>
+      </div>
+      <div *ngIf="currentImages.length > 0">
+        <div class="label mb-1">Existing Images</div>
+        <ul class="text-sm text-gray-600 space-y-1">
+          <li *ngFor="let src of currentImages">{{ src }}</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card p-4 space-y-4">
+      <app-file-uploader
+        label="{{ isEditMode ? 'Add New Images' : 'Images' }}"
+        accept="image/*"
+        [multiple]="true"
+        (filesSelected)="onFilesSelected($event)">
+      </app-file-uploader>
+      <ul *ngIf="imageNames.length > 0" class="text-xs text-gray-500 space-y-1 max-h-32 overflow-y-auto">
+        <li *ngFor="let name of imageNames">{{ name }}</li>
+      </ul>
+      <button type="submit" class="btn btn-primary w-full" [disabled]="saving">
+        {{ saving ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Product') }}
+      </button>
+    </div>
+  </form>
+</div>

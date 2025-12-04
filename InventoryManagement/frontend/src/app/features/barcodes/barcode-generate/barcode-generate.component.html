@@ -1,0 +1,43 @@
+<div class="space-y-4">
+  <h1 class="page-title">Generate Barcode</h1>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-4 space-y-4">
+      <div>
+        <label class="label">Select Product</label>
+        <select class="input" [(ngModel)]="selectedProduct" (change)="onProductSelect()" [disabled]="loading">
+          <option [ngValue]="null">Select a product</option>
+          <option *ngFor="let product of products" [ngValue]="product">{{ product.name }} ({{ product.sku }})</option>
+        </select>
+      </div>
+      <div>
+        <label class="label">Barcode Type</label>
+        <select class="input" [(ngModel)]="barcodeType">
+          <option value="code128">Code 128</option>
+          <option value="code39">Code 39</option>
+          <option value="ean13">EAN-13</option>
+          <option value="qr">QR Code</option>
+        </select>
+      </div>
+      <div>
+        <label class="label">Barcode Value</label>
+        <input class="input" [(ngModel)]="barcodeValue" placeholder="Enter barcode value" />
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-primary" (click)="generateBarcode()">Generate</button>
+        <button *ngIf="selectedProduct" class="btn btn-secondary" (click)="saveBarcodeToProduct()">Save to Product</button>
+      </div>
+    </div>
+
+    <div class="card p-4">
+      <h2 class="text-lg font-semibold mb-4">Preview</h2>
+      <div *ngIf="generatedBarcode" class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
+        <app-barcode-preview [type]="barcodeType" [value]="generatedBarcode"></app-barcode-preview>
+        <p class="mt-4 text-sm text-gray-600">{{ generatedBarcode }}</p>
+      </div>
+      <div *ngIf="!generatedBarcode" class="flex items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-400">
+        <p>Generate a barcode to see preview</p>
+      </div>
+    </div>
+  </div>
+</div>
