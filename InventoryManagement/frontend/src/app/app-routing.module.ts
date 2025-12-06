@@ -13,6 +13,7 @@ import { SuppliersListComponent } from './features/suppliers/suppliers-list/supp
 import { SupplierFormComponent } from './features/suppliers/supplier-form/supplier-form.component';
 import { BarcodeGenerateComponent } from './features/barcodes/barcode-generate/barcode-generate.component';
 import { BarcodePrintComponent } from './features/barcodes/barcode-print/barcode-print.component';
+import { BarcodeScanComponent } from './features/barcodes/barcode-scan/barcode-scan.component';
 import { WarehousesListComponent } from './features/warehouse/warehouses-list/warehouses-list.component';
 import { WarehouseFormComponent } from './features/warehouse/warehouse-form/warehouse-form.component';
 import { LocationsComponent } from './features/warehouse/locations/locations.component';
@@ -45,6 +46,7 @@ const routes: Routes = [
       { path: 'suppliers/:id/edit', component: SupplierFormComponent },
       { path: 'barcodes/generate', component: BarcodeGenerateComponent },
       { path: 'barcodes/print', component: BarcodePrintComponent },
+      { path: 'barcodes/scan', component: BarcodeScanComponent },
       { path: 'warehouses', component: WarehousesListComponent },
       { path: 'warehouses/new', component: WarehouseFormComponent },
       { path: 'warehouses/:id', component: WarehouseFormComponent },

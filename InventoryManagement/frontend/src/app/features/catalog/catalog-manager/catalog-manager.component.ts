@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { CatalogService } from '../../../core/services/catalog.service';
 
@@ -19,10 +20,20 @@ export class CatalogManagerComponent implements OnInit {
 
   constructor(
     private catalogService: CatalogService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    // Read route data to determine which section to show
+    const routeType = this.route.snapshot.data['type'];
+    if (routeType === 'category') {
+      this.activeTab = 'categories';
+    } else if (routeType === 'brand') {
+      this.activeTab = 'brands';
+    } else if (routeType === 'variant') {
+      this.activeTab = 'variants';
+    }
     this.loadData();
   }
 
@@ -97,29 +108,49 @@ export class CatalogManagerComponent implements OnInit {
       payload.parent = this.formData.parent;
     }
 
+    if (this.editItem) {
+      const itemId = this.editItem.id || this.editItem._id;
+      if (!itemId) {
+        this.toastr.error('Invalid item ID');
+        return;
+      }
+    }
+
+    const itemId = this.editItem?.id || this.editItem?._id;
+    console.log('Saving item:', { itemId, payload, editItem: this.editItem, activeTab: this.activeTab });
+    
     let operation;
     if (this.activeTab === 'categories') {
       operation = this.editItem
-        ? this.catalogService.updateCategory(this.editItem.id, payload)
+        ? this.catalogService.updateCategory(itemId, payload)
         : this.catalogService.createCategory(payload);
     } else if (this.activeTab === 'brands') {
       operation = this.editItem
-        ? this.catalogService.updateBrand(this.editItem.id, payload)
+        ? this.catalogService.updateBrand(itemId, payload)
         : this.catalogService.createBrand(payload);
     } else {
       operation = this.editItem
-        ? this.catalogService.updateVariant(this.editItem.id, payload)
+        ? this.catalogService.updateVariant(itemId, payload)
         : this.catalogService.createVariant(payload);
     }
 
     operation.subscribe({
       next: () => {
-        this.toastr.success(`${this.activeTab.slice(0, -1)} ${this.editItem ? 'updated' : 'created'} successfully`);
+        this.toastr.success(`${this.activeTab === 'categories' ? 'Category' : this.activeTab === 'brands' ? 'Brand' : 'Variant'} ${this.editItem ? 'updated' : 'created'} successfully`);
         this.closeModal();
         this.loadData();
       },
-      error: () => {
-        this.toastr.error(`Failed to ${this.editItem ? 'update' : 'create'} ${this.activeTab.slice(0, -1)}`);
+      error: (err: any) => {
+        console.error('Save error:', err);
+        console.error('Error details:', {
+          status: err?.status,
+          statusText: err?.statusText,
+          url: err?.url,
+          error: err?.error,
+          message: err?.message
+        });
+        const errorMsg = err?.error?.message || err?.message || `Failed to ${this.editItem ? 'update' : 'create'} ${this.activeTab === 'categories' ? 'category' : this.activeTab === 'brands' ? 'brand' : 'variant'}`;
+        this.toastr.error(errorMsg);
       }
     });
   }
@@ -127,22 +158,39 @@ export class CatalogManagerComponent implements OnInit {
   deleteItem(item: any): void {
     if (!confirm(`Are you sure you want to delete ${item.name}?`)) return;
     
+    const itemId = item.id || item._id;
+    if (!itemId) {
+      this.toastr.error('Invalid item ID');
+      return;
+    }
+    
+    console.log('Deleting item:', { itemId, item, activeTab: this.activeTab });
+    
     let operation;
     if (this.activeTab === 'categories') {
-      operation = this.catalogService.deleteCategory(item.id);
+      operation = this.catalogService.deleteCategory(itemId);
     } else if (this.activeTab === 'brands') {
-      operation = this.catalogService.deleteBrand(item.id);
+      operation = this.catalogService.deleteBrand(itemId);
     } else {
-      operation = this.catalogService.deleteVariant(item.id);
+      operation = this.catalogService.deleteVariant(itemId);
     }
 
     operation.subscribe({
       next: () => {
-        this.toastr.success(`${this.activeTab.slice(0, -1)} deleted successfully`);
+        this.toastr.success(`${this.activeTab === 'categories' ? 'Category' : this.activeTab === 'brands' ? 'Brand' : 'Variant'} deleted successfully`);
         this.loadData();
       },
-      error: () => {
-        this.toastr.error(`Failed to delete ${this.activeTab.slice(0, -1)}`);
+      error: (err: any) => {
+        console.error('Delete error:', err);
+        console.error('Error details:', {
+          status: err?.status,
+          statusText: err?.statusText,
+          url: err?.url,
+          error: err?.error,
+          message: err?.message
+        });
+        const errorMsg = err?.error?.message || err?.message || `Failed to delete ${this.activeTab === 'categories' ? 'category' : this.activeTab === 'brands' ? 'brand' : 'variant'}`;
+        this.toastr.error(errorMsg);
       }
     });
   }

@@ -48,7 +48,9 @@ const productSchema = new mongoose.Schema({
   },
   status: { type: String, enum: ['active', 'inactive', 'discontinued'], default: 'active' },
   tags: [{ type: String }],
-  notes: { type: String, default: '' }
+  notes: { type: String, default: '' },
+  pdfUrl: { type: String, default: '' },
+  pdfGeneratedAt: { type: Date }
 }, { timestamps: true });
 
 productSchema.index({ name: 'text', sku: 'text', barcode: 'text' });

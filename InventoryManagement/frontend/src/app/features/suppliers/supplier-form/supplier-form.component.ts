@@ -3,6 +3,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { SuppliersService } from '../../../core/services/suppliers.service';
+import { ProductsService } from '../../../core/services/products.service';
 
 @Component({
   selector: 'app-supplier-form',
@@ -12,6 +13,7 @@ import { SuppliersService } from '../../../core/services/suppliers.service';
 export class SupplierFormComponent implements OnInit {
   form = this.fb.group({
     name: ['', Validators.required],
+    companyName: ['', Validators.required],
     contactName: [''],
     email: ['', [Validators.email]],
     phone: [''],
@@ -21,16 +23,21 @@ export class SupplierFormComponent implements OnInit {
     zipCode: [''],
     country: [''],
     website: [''],
-    notes: ['']
+    notes: [''],
+    products: [[] as string[]]
   });
   loading = true;
   saving = false;
   supplierId: string | null = null;
+  products: any[] = [];
+  selectedProducts: any[] = [];
+  productsLoading = false;
   get isEditMode(): boolean { return !!this.supplierId; }
 
   constructor(
     private fb: FormBuilder,
     private suppliersService: SuppliersService,
+    private productsService: ProductsService,
     private route: ActivatedRoute,
     public router: Router,
     private toastr: ToastrService
@@ -38,11 +45,27 @@ export class SupplierFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.supplierId = this.route.snapshot.paramMap.get('id');
+    this.loadProducts();
     if (this.supplierId) {
       this.loadSupplier(this.supplierId);
     } else {
       this.loading = false;
     }
+  }
+
+  loadProducts(): void {
+    this.productsLoading = true;
+    this.productsService.list({ limit: 1000 }).subscribe({
+      next: (res) => {
+        this.products = res.products || [];
+        this.productsLoading = false;
+      },
+      error: (err) => {
+        console.error('Failed to load products:', err);
+        this.productsLoading = false;
+        this.toastr.warning('Failed to load products list');
+      }
+    });
   }
 
   loadSupplier(id: string): void {
@@ -51,19 +74,25 @@ export class SupplierFormComponent implements OnInit {
       next: (supplier) => {
         const address = supplier.address || {};
         const addressObj = typeof address === 'string' ? {} : (address as Record<string, string>);
+        const supplierProducts = (supplier as any).products || [];
+        const productIds = supplierProducts.map((p: any) => p.product?.id || p.product?._id || p.product).filter(Boolean);
+        
         this.form.patchValue({
           name: supplier.name || '',
+          companyName: supplier.companyName || '',
           contactName: supplier.contact?.person || '',
           email: supplier.contact?.email || '',
           phone: supplier.contact?.phone || '',
           address: typeof address === 'string' ? address : (addressObj['street'] || addressObj['address'] || ''),
           city: addressObj['city'] || '',
           state: addressObj['state'] || '',
-          zipCode: addressObj['zipCode'] || addressObj['zip'] || '',
+          zipCode: addressObj['postalCode'] || addressObj['zipCode'] || addressObj['zip'] || '',
           country: addressObj['country'] || '',
           website: supplier.business?.['website'] || '',
-          notes: supplier.notes || ''
+          notes: supplier.notes || '',
+          products: productIds
         });
+        this.selectedProducts = this.products.filter(p => productIds.includes(p.id));
         this.loading = false;
       },
       error: () => {
@@ -74,12 +103,40 @@ export class SupplierFormComponent implements OnInit {
     });
   }
 
+  onProductSelect(event: Event): void {
+    const selectElement = event.target as HTMLSelectElement;
+    const productId = selectElement.value;
+    if (!productId) return;
+    
+    const product = this.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    const productIds = (this.form.value.products as string[]) || [];
+    if (!productIds.includes(product.id)) {
+      this.selectedProducts.push(product);
+      this.form.patchValue({ products: [...productIds, product.id] as string[] });
+    }
+    selectElement.value = '';
+  }
+
+  removeProduct(productId: string): void {
+    this.selectedProducts = this.selectedProducts.filter(p => p.id !== productId);
+    const productIds = ((this.form.value.products as string[]) || []).filter((id: string) => id !== productId);
+    this.form.patchValue({ products: productIds as string[] });
+  }
+
   onSubmit(): void {
-    if (this.form.invalid || this.saving) return;
+    if (this.form.invalid || this.saving) {
+      if (this.form.invalid) {
+        this.toastr.error('Please fill in all required fields');
+      }
+      return;
+    }
     this.saving = true;
     const formValue = this.form.value;
     const payload: any = {
-      name: formValue.name || undefined,
+      name: formValue.name || '',
+      companyName: formValue.companyName || '',
       contact: {
         person: formValue.contactName || undefined,
         email: formValue.email || undefined,
@@ -89,7 +146,7 @@ export class SupplierFormComponent implements OnInit {
         street: formValue.address || undefined,
         city: formValue.city || undefined,
         state: formValue.state || undefined,
-        zipCode: formValue.zipCode || undefined,
+        postalCode: formValue.zipCode || undefined,
         country: formValue.country || undefined
       },
       business: {
@@ -97,17 +154,27 @@ export class SupplierFormComponent implements OnInit {
       },
       notes: formValue.notes || undefined
     };
+
+    // Add products if selected
+    const productIds = formValue.products || [];
+    if (productIds.length > 0) {
+      payload.products = productIds.map((productId: string) => ({
+        product: productId
+      }));
+    }
     
     // Remove undefined values to avoid sending null
     Object.keys(payload).forEach(key => {
       if (payload[key] === undefined) delete payload[key];
-      if (typeof payload[key] === 'object' && payload[key] !== null) {
+      if (typeof payload[key] === 'object' && payload[key] !== null && !Array.isArray(payload[key])) {
         Object.keys(payload[key]).forEach(subKey => {
           if (payload[key][subKey] === undefined) delete payload[key][subKey];
         });
         if (Object.keys(payload[key]).length === 0) delete payload[key];
       }
     });
+    
+    console.log('Submitting supplier payload:', payload);
     
     const operation = this.isEditMode
       ? this.suppliersService.update(this.supplierId!, payload)
@@ -119,7 +186,21 @@ export class SupplierFormComponent implements OnInit {
         this.router.navigate(['/suppliers']);
       },
       error: (error: any) => {
-        this.toastr.error(error?.message || `Failed to ${this.isEditMode ? 'update' : 'create'} supplier`);
+        console.error('Supplier create/update error:', error);
+        let errorMessage = `Failed to ${this.isEditMode ? 'update' : 'create'} supplier`;
+        
+        if (error?.error) {
+          if (error.error.errors && Array.isArray(error.error.errors)) {
+            const validationErrors = error.error.errors.map((e: any) => e.msg || e.message || e).join(', ');
+            errorMessage = `Validation failed: ${validationErrors}`;
+          } else if (error.error.message) {
+            errorMessage = error.error.message;
+          }
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        this.toastr.error(errorMessage);
         this.saving = false;
       }
     });

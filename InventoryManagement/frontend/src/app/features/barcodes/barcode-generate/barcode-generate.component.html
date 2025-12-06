@@ -11,15 +11,6 @@
         </select>
       </div>
       <div>
-        <label class="label">Barcode Type</label>
-        <select class="input" [(ngModel)]="barcodeType">
-          <option value="code128">Code 128</option>
-          <option value="code39">Code 39</option>
-          <option value="ean13">EAN-13</option>
-          <option value="qr">QR Code</option>
-        </select>
-      </div>
-      <div>
         <label class="label">Barcode Value</label>
         <input class="input" [(ngModel)]="barcodeValue" placeholder="Enter barcode value" />
       </div>
@@ -29,14 +20,18 @@
       </div>
     </div>
 
-    <div class="card p-4">
-      <h2 class="text-lg font-semibold mb-4">Preview</h2>
-      <div *ngIf="generatedBarcode" class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-        <app-barcode-preview [type]="barcodeType" [value]="generatedBarcode"></app-barcode-preview>
-        <p class="mt-4 text-sm text-gray-600">{{ generatedBarcode }}</p>
-      </div>
-      <div *ngIf="!generatedBarcode" class="flex items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-400">
-        <p>Generate a barcode to see preview</p>
+    <div class="card p-4" *ngIf="generatedBarcode">
+      <h2 class="text-lg font-semibold mb-4">Generated Barcodes</h2>
+      <div class="flex flex-col items-center justify-center gap-6 p-8 border-2 border-dashed border-gray-300 rounded-lg">
+        <div class="flex flex-col items-center gap-2">
+          <app-barcode-preview type="code128" [value]="generatedBarcode"></app-barcode-preview>
+          <p class="text-sm text-gray-600">Code 128</p>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+          <app-barcode-preview type="qr" [value]="getQrCodeValue()"></app-barcode-preview>
+          <p class="text-sm text-gray-600">QR Code</p>
+        </div>
+        <p class="mt-4 text-sm text-gray-600 font-medium">Barcode Value: {{ generatedBarcode }}</p>
       </div>
     </div>
   </div>

@@ -1,42 +1,13 @@
 <div class="space-y-4">
   <div class="flex items-center justify-between flex-wrap gap-3">
-    <h1 class="page-title">Catalog Manager</h1>
+    <h1 class="page-title">{{ activeTab === 'categories' ? 'Categories' : activeTab === 'brands' ? 'Brands' : 'Variants' }}</h1>
     <button class="btn btn-primary" (click)="openAddModal()">
       <lucide-icon name="plus" class="h-4 w-4"></lucide-icon>
-      Add {{ activeTab.slice(0, -1) }}
+      Add {{ activeTab === 'categories' ? 'Category' : activeTab === 'brands' ? 'Brand' : 'Variant' }}
     </button>
   </div>
 
   <div class="card p-4">
-    <div class="flex gap-2 border-b mb-4">
-      <button
-        class="px-4 py-2 text-sm font-medium transition-colors"
-        [ngClass]="{
-          'border-b-2 border-blue-600 text-blue-600': activeTab === 'categories',
-          'text-gray-600 hover:text-gray-900': activeTab !== 'categories'
-        }"
-        (click)="switchTab('categories')">
-        Categories
-      </button>
-      <button
-        class="px-4 py-2 text-sm font-medium transition-colors"
-        [ngClass]="{
-          'border-b-2 border-blue-600 text-blue-600': activeTab === 'brands',
-          'text-gray-600 hover:text-gray-900': activeTab !== 'brands'
-        }"
-        (click)="switchTab('brands')">
-        Brands
-      </button>
-      <button
-        class="px-4 py-2 text-sm font-medium transition-colors"
-        [ngClass]="{
-          'border-b-2 border-blue-600 text-blue-600': activeTab === 'variants',
-          'text-gray-600 hover:text-gray-900': activeTab !== 'variants'
-        }"
-        (click)="switchTab('variants')">
-        Variants
-      </button>
-    </div>
 
     <div *ngIf="loading" class="flex items-center justify-center py-12">
       <app-spinner class="h-6 w-6"></app-spinner>
@@ -74,7 +45,7 @@
   </div>
 </div>
 
-<app-modal *ngIf="showAddModal" [open]="showAddModal" (close)="closeModal()" [title]="editItem ? 'Edit ' + activeTab.slice(0, -1) : 'Add ' + activeTab.slice(0, -1)">
+<app-modal *ngIf="showAddModal" [open]="showAddModal" (close)="closeModal()" [title]="(editItem ? 'Edit ' : 'Add ') + (activeTab === 'categories' ? 'Category' : activeTab === 'brands' ? 'Brand' : 'Variant')">
   <form (ngSubmit)="save()" class="space-y-4">
     <div>
       <label class="label">Name <span class="text-red-500">*</span></label>

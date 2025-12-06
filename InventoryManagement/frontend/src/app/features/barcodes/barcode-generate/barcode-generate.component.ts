@@ -42,8 +42,22 @@ export class BarcodeGenerateComponent implements OnInit {
 
   onProductSelect(): void {
     if (this.selectedProduct) {
+      // Use product's barcode value, fallback to SKU
       this.barcodeValue = this.selectedProduct.barcode || this.selectedProduct.sku || '';
-      this.generateBarcode();
+      // If product doesn't have PDF URL, fetch full product details
+      if (!this.selectedProduct.pdfUrl) {
+        this.productsService.get(this.selectedProduct.id).subscribe({
+          next: (product) => {
+            this.selectedProduct = product;
+            this.generateBarcode();
+          },
+          error: () => {
+            this.generateBarcode();
+          }
+        });
+      } else {
+        this.generateBarcode();
+      }
     }
   }
 
@@ -52,10 +66,26 @@ export class BarcodeGenerateComponent implements OnInit {
       this.toastr.error('Please enter a barcode value');
       return;
     }
-    this.generatedBarcode = this.barcodeValue;
-    if (this.selectedProduct && !this.selectedProduct.barcode) {
-      // Optionally save barcode to product
+    
+    // If product is selected, use its barcode value
+    if (this.selectedProduct) {
+      this.barcodeValue = this.selectedProduct.barcode || this.selectedProduct.sku || this.barcodeValue;
     }
+    
+    // Always generate both Code 128 and QR Code
+    this.generatedBarcode = this.barcodeValue;
+  }
+
+  getQrCodeValue(): string {
+    // If product is selected and has PDF URL, use it for QR code
+    if (this.selectedProduct?.pdfUrl) {
+      const baseUrl = window.location.origin;
+      return this.selectedProduct.pdfUrl.startsWith('http') 
+        ? this.selectedProduct.pdfUrl 
+        : `${baseUrl}${this.selectedProduct.pdfUrl}`;
+    }
+    // Otherwise use barcode value
+    return this.generatedBarcode || this.barcodeValue;
   }
 
   saveBarcodeToProduct(): void {

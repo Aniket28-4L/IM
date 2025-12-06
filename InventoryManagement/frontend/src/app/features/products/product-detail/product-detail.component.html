@@ -10,8 +10,15 @@
   <div class="flex items-center justify-between">
     <h1 class="page-title">{{ product.name }}</h1>
     <div class="flex items-center gap-2">
+      <button (click)="generatePdf()" class="btn btn-primary" [disabled]="generatingPdf">
+        <span *ngIf="!generatingPdf">Generate PDF</span>
+        <span *ngIf="generatingPdf">Generating...</span>
+      </button>
       <a [routerLink]="['/products', product.id, 'edit']" class="btn btn-secondary">Edit</a>
-      <a routerLink="/barcodes/print" class="btn btn-primary">Print Label</a>
+      <button (click)="printLabel()" class="btn btn-secondary" [disabled]="!product.barcode">
+        <lucide-icon name="printer" class="h-4 w-4"></lucide-icon>
+        Print Label
+      </button>
     </div>
   </div>
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -52,8 +59,14 @@
     <div class="card p-4">
       <div class="label mb-2">Barcode</div>
       <div *ngIf="product.barcode" class="flex flex-wrap items-center gap-3">
-        <app-barcode-preview type="code128" [value]="product.barcode"></app-barcode-preview>
-        <app-barcode-preview type="qr" [value]="product.barcode"></app-barcode-preview>
+        <div class="flex flex-col items-center gap-2">
+          <app-barcode-preview type="code128" [value]="product.barcode"></app-barcode-preview>
+          <span class="text-xs text-gray-500">Code 128</span>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+          <app-barcode-preview type="qr" [value]="getQrCodeValue()"></app-barcode-preview>
+          <span class="text-xs text-gray-500">QR Code</span>
+        </div>
       </div>
       <div *ngIf="!product.barcode" class="text-sm text-gray-500">No barcode available.</div>
     </div>
@@ -194,5 +207,28 @@
       </div>
     </form>
   </app-modal>
+</div>
+
+<!-- Print-only label section -->
+<div class="print-label-container" style="display: none !important;">
+  <div class="product-label">
+    <div class="label-header">
+      <h2 class="label-product-name">{{ product?.name || 'Product Name' }}</h2>
+      <p class="label-sku">SKU: {{ product?.sku || '-' }}</p>
+    </div>
+    <div class="label-barcodes">
+      <div class="label-barcode-item" *ngIf="product?.barcode">
+        <app-barcode-preview type="code128" [value]="product.barcode"></app-barcode-preview>
+        <p class="label-barcode-text">{{ product.barcode }}</p>
+      </div>
+      <div class="label-qr-item" *ngIf="product">
+        <app-barcode-preview type="qr" [value]="getQrCodeValue()"></app-barcode-preview>
+        <p class="label-qr-text">Scan for details</p>
+      </div>
+    </div>
+    <div class="label-footer">
+      <p class="label-price" *ngIf="product?.price">{{ formatCurrency(product.price) }}</p>
+    </div>
+  </div>
 </div>
 

@@ -144,6 +144,33 @@ export const createSupplier = async (req, res) => {
       data: populatedSupplier
     });
   } catch (error) {
+    console.error('Error creating supplier:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      errors: error.errors
+    });
+    
+    // Handle MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors || {}).map((e) => e.message);
+      return res.status(400).json({ 
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors.map(msg => ({ msg }))
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      return res.status(400).json({ 
+        success: false,
+        message: `${field} already exists`
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
       message: 'Error creating supplier', 

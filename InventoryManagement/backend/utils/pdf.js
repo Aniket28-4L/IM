@@ -1,4 +1,83 @@
 import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export function generateProductPdf(product) {
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const chunks = [];
+  
+  // Header
+  doc.fontSize(20).font('Helvetica-Bold').text(product.name || 'Product Details', { align: 'center' });
+  doc.moveDown();
+  
+  // Product Information Section
+  doc.fontSize(14).font('Helvetica-Bold').text('Product Information', { underline: true });
+  doc.moveDown(0.5);
+  doc.fontSize(11).font('Helvetica');
+  
+  const info = [
+    ['SKU:', product.sku || '-'],
+    ['Barcode:', product.barcode || '-'],
+    ['Category:', product.categoryName || product.category?.name || '-'],
+    ['Brand:', product.brandName || product.brand?.name || '-'],
+    ['Variant:', product.variantName || product.variant?.name || '-'],
+    ['Unit:', product.uom || '-'],
+    ['Cost:', product.cost ? `$${product.cost.toFixed(2)}` : '-'],
+    ['Price:', product.price ? `$${product.price.toFixed(2)}` : '-'],
+    ['Status:', product.status || 'active']
+  ];
+  
+  info.forEach(([label, value]) => {
+    doc.text(`${label} ${value}`, { continued: false });
+  });
+  
+  doc.moveDown();
+  
+  // Description
+  if (product.description) {
+    doc.fontSize(14).font('Helvetica-Bold').text('Description', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(11).font('Helvetica').text(product.description, { align: 'left' });
+    doc.moveDown();
+  }
+  
+  // Specifications
+  if (product.specifications) {
+    doc.fontSize(14).font('Helvetica-Bold').text('Specifications', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(11).font('Helvetica');
+    
+    const specs = product.specifications;
+    if (specs.weight) doc.text(`Weight: ${specs.weight}`);
+    if (specs.dimensions) {
+      doc.text(`Dimensions: ${specs.dimensions.length || 0} x ${specs.dimensions.width || 0} x ${specs.dimensions.height || 0} ${specs.dimensions.unit || 'cm'}`);
+    }
+    if (specs.color) doc.text(`Color: ${specs.color}`);
+    if (specs.material) doc.text(`Material: ${specs.material}`);
+    if (specs.manufacturer) doc.text(`Manufacturer: ${specs.manufacturer}`);
+    if (specs.countryOfOrigin) doc.text(`Country of Origin: ${specs.countryOfOrigin}`);
+    doc.moveDown();
+  }
+  
+  // Footer
+  doc.fontSize(8).fillColor('#666666').text(
+    `Generated on: ${new Date().toLocaleString()}`,
+    50,
+    doc.page.height - 50,
+    { align: 'center' }
+  );
+  
+  return new Promise((resolve) => {
+    const buffer = [];
+    doc.on('data', (d) => buffer.push(d));
+    doc.on('end', () => resolve(Buffer.concat(buffer)));
+    doc.end();
+  });
+}
 
 export function generateLabelsPdf(labels = [], options = { paper: 'A4' }) {
   const doc = new PDFDocument({ size: options.paper?.toUpperCase() === 'A4' ? 'A4' : 'LETTER', margin: 20 });

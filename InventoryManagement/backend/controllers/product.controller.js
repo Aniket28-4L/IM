@@ -3,6 +3,14 @@ import Category from '../models/Category.js';
 import Brand from '../models/Brand.js';
 import Stock from '../models/Stock.js';
 import { parseFileToJson, jsonToWorkbook } from '../utils/csv.js';
+import { generateProductPdf } from '../utils/pdf.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PDF_DIR = path.join(__dirname, '../uploads/pdfs');
 
 export async function createProduct(req, res, next) {
   try {
@@ -50,6 +58,38 @@ export async function listProducts(req, res, next) {
   } catch (e) { next(e); }
 }
 
+// Helper function to generate and save product PDF
+async function generateAndSaveProductPdf(product) {
+  try {
+    // Ensure PDF directory exists
+    if (!fs.existsSync(PDF_DIR)) {
+      fs.mkdirSync(PDF_DIR, { recursive: true });
+    }
+    
+    // Generate PDF buffer
+    const pdfBuffer = await generateProductPdf(product);
+    
+    // Save PDF to file system
+    const filename = `product-${product._id || product.id}.pdf`;
+    const filepath = path.join(PDF_DIR, filename);
+    fs.writeFileSync(filepath, pdfBuffer);
+    
+    // Generate URL path
+    const pdfUrl = `/api/products/${product._id || product.id}/pdf`;
+    
+    // Update product with PDF URL
+    await Product.findByIdAndUpdate(product._id || product.id, {
+      pdfUrl,
+      pdfGeneratedAt: new Date()
+    });
+    
+    return { pdfUrl, filepath };
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw error;
+  }
+}
+
 export async function getProduct(req, res, next) {
   try {
     const p = await Product.findById(req.params.id)
@@ -67,6 +107,17 @@ export async function getProduct(req, res, next) {
       variantName: p.variant && typeof p.variant === 'object' ? p.variant.name : null,
       variant: p.variant && typeof p.variant === 'object' ? p.variant._id : p.variant
     };
+    
+    // Auto-generate PDF if it doesn't exist or is outdated
+    if (!data.pdfUrl || !data.pdfGeneratedAt) {
+      try {
+        const { pdfUrl } = await generateAndSaveProductPdf(data);
+        data.pdfUrl = pdfUrl;
+      } catch (error) {
+        console.error('Failed to auto-generate PDF:', error);
+      }
+    }
+    
     res.json({ success: true, data });
   } catch (e) { next(e); }
 }
@@ -99,6 +150,79 @@ export async function importProducts(req, res, next) {
     })), { ordered: false });
     res.json({ success: true, inserted: docs.length });
   } catch (e) { next(e); }
+}
+
+export async function generateProductPdfEndpoint(req, res, next) {
+  try {
+    console.log('PDF generation endpoint called for product ID:', req.params.id);
+    const product = await Product.findById(req.params.id)
+      .populate('category', 'name')
+      .populate('brand', 'name')
+      .populate('variant', 'name')
+      .lean();
+    
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    
+    const productData = {
+      ...product,
+      categoryName: product.category && typeof product.category === 'object' ? product.category.name : null,
+      brandName: product.brand && typeof product.brand === 'object' ? product.brand.name : null,
+      variantName: product.variant && typeof product.variant === 'object' ? product.variant.name : null
+    };
+    
+    const { pdfUrl, filepath } = await generateAndSaveProductPdf(productData);
+    
+    // Return PDF as download
+    const pdfBuffer = fs.readFileSync(filepath);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="product-${product._id}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function getProductPdf(req, res, next) {
+  try {
+    const product = await Product.findById(req.params.id).lean();
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    
+    const filename = `product-${product._id}.pdf`;
+    const filepath = path.join(PDF_DIR, filename);
+    
+    // Generate PDF if it doesn't exist
+    if (!fs.existsSync(filepath)) {
+      const productData = await Product.findById(req.params.id)
+        .populate('category', 'name')
+        .populate('brand', 'name')
+        .populate('variant', 'name')
+        .lean();
+      
+      const fullProductData = {
+        ...productData,
+        categoryName: productData.category && typeof productData.category === 'object' ? productData.category.name : null,
+        brandName: productData.brand && typeof productData.brand === 'object' ? productData.brand.name : null,
+        variantName: productData.variant && typeof productData.variant === 'object' ? productData.variant.name : null
+      };
+      
+      await generateAndSaveProductPdf(fullProductData);
+    }
+    
+    // Serve PDF
+    if (fs.existsSync(filepath)) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      res.sendFile(filepath);
+    } else {
+      res.status(404).json({ success: false, message: 'PDF not found' });
+    }
+  } catch (e) {
+    next(e);
+  }
 }
 
 export async function exportProducts(req, res, next) {

@@ -121,4 +121,19 @@ export class SuppliersListComponent implements OnInit, OnDestroy {
     if (this.page === 1) return;
     this.goTo(this.page - 1);
   }
+
+  getSupplierProducts(supplier: any): any[] {
+    if (!supplier) return [];
+    // Handle both populated and unpopulated product structures
+    const products = supplier.products || [];
+    return products.map((p: any) => {
+      // If product is populated, it will have a product object with name
+      // If not populated, it might just be an ID or have product as an ID
+      if (p.product && typeof p.product === 'object' && p.product.name) {
+        return { name: p.product.name, id: p.product._id || p.product.id };
+      }
+      // Fallback for unpopulated or different structures
+      return { name: p.name || '-', id: p.product || p._id || p.id };
+    }).filter((p: any) => p.name && p.name !== '-');
+  }
 }
