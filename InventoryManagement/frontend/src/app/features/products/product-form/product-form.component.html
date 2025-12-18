@@ -43,6 +43,22 @@
           </select>
         </div>
       </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="sm:col-span-2">
+          <label class="label">Supplier</label>
+          <select class="input" formControlName="supplier" [disabled]="suppliersLoading">
+            <option value="">Select supplier</option>
+            <option *ngFor="let s of suppliers" [value]="s.id">
+              {{ s.name }} - {{ s.companyName }}
+            </option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button type="button" class="btn btn-secondary w-full" (click)="showInlineSupplierForm = true">
+            Add New Supplier
+          </button>
+        </div>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="label">Cost</label>
@@ -65,18 +81,25 @@
       </div>
     </div>
     <div class="card p-4 space-y-4">
-      <app-file-uploader
-        label="{{ isEditMode ? 'Add New Images' : 'Images' }}"
-        accept="image/*"
-        [multiple]="true"
-        (filesSelected)="onFilesSelected($event)">
-      </app-file-uploader>
-      <ul *ngIf="imageNames.length > 0" class="text-xs text-gray-500 space-y-1 max-h-32 overflow-y-auto">
-        <li *ngFor="let name of imageNames">{{ name }}</li>
-      </ul>
       <button type="submit" class="btn btn-primary w-full" [disabled]="saving">
         {{ saving ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Product') }}
       </button>
     </div>
   </form>
+
+  <!-- Inline supplier creation modal -->
+  <div *ngIf="showInlineSupplierForm" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded shadow-lg p-4">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Add Supplier</h2>
+        <button type="button" class="text-gray-500 hover:text-gray-800" (click)="showInlineSupplierForm = false">
+          ✕
+        </button>
+      </div>
+      <app-supplier-form
+        [inline]="true"
+        (saved)="onInlineSupplierSaved($event)">
+      </app-supplier-form>
+    </div>
+  </div>
 </div>

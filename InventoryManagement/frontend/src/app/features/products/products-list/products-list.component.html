@@ -2,13 +2,9 @@
   <div class="flex items-center justify-between flex-wrap gap-3">
     <h1 class="page-title">Products</h1>
     <div class="flex items-center gap-2">
-      <button class="btn btn-secondary" (click)="toastr.info('Product export initiated')">
+      <button class="btn btn-secondary" type="button" (click)="export()" [disabled]="exporting">
         <lucide-icon name="download" class="h-4 w-4"></lucide-icon>
-        Export
-      </button>
-      <button class="btn btn-secondary" (click)="router.navigate(['/products/import'])">
-        <lucide-icon name="upload" class="h-4 w-4"></lucide-icon>
-        Import
+        {{ exporting ? 'Exporting...' : 'Export' }}
       </button>
       <button class="btn btn-primary" (click)="router.navigate(['/products/new'])">
         <lucide-icon name="plus" class="h-4 w-4"></lucide-icon>
@@ -46,6 +42,7 @@
             <th class="px-6 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Name</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">SKU</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Category</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Supplier</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Price</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Stock</th>
             <th class="px-6 py-3 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Actions</th>
@@ -68,6 +65,9 @@
             </td>
             <td class="px-6 py-4 text-sm text-neutral-700">{{ product.sku || '-' }}</td>
             <td class="px-6 py-4 text-sm text-neutral-700">{{ product.categoryName || product.category || '-' }}</td>
+            <td class="px-6 py-4 text-sm text-neutral-700">
+              {{ product['supplierName'] || '-' }}
+            </td>
             <td class="px-6 py-4 text-sm text-neutral-700">
               {{ product.price != null ? ('$' + (product.price | number:'1.2-2')) : '-' }}
             </td>

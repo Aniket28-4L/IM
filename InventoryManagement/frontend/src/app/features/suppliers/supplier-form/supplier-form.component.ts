@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
@@ -33,6 +33,9 @@ export class SupplierFormComponent implements OnInit {
   selectedProducts: any[] = [];
   productsLoading = false;
   get isEditMode(): boolean { return !!this.supplierId; }
+
+  @Input() inline = false;
+  @Output() saved = new EventEmitter<any>();
 
   constructor(
     private fb: FormBuilder,
@@ -181,9 +184,14 @@ export class SupplierFormComponent implements OnInit {
       : this.suppliersService.create(payload);
 
     operation.subscribe({
-      next: () => {
+      next: (supplier) => {
         this.toastr.success(`Supplier ${this.isEditMode ? 'updated' : 'created'} successfully`);
-        this.router.navigate(['/suppliers']);
+
+        if (this.inline) {
+          this.saved.emit(supplier);
+        } else {
+          this.router.navigate(['/suppliers']);
+        }
       },
       error: (error: any) => {
         console.error('Supplier create/update error:', error);

@@ -16,6 +16,7 @@ export class ProductsListComponent implements OnInit, OnDestroy {
   pageSize = 10;
   total = 0;
   loading = true;
+  exporting = false;
   searchTerm = '';
   deleteTarget: Product | null = null;
   private searchSubject = new Subject<string>();
@@ -45,7 +46,7 @@ export class ProductsListComponent implements OnInit, OnDestroy {
         this.searchTerm = params['q'];
         this.searchSubject.next(this.searchTerm);
       } else {
-        this.fetchProducts();
+    this.fetchProducts();
       }
     });
   }
@@ -114,6 +115,49 @@ export class ProductsListComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.toastr.error('Failed to delete product');
+      }
+    });
+  }
+
+  export(): void {
+    if (this.exporting) {
+      return;
+    }
+    this.exporting = true;
+    const params: any = {};
+    if (this.searchTerm && this.searchTerm.trim()) {
+      params.q = this.searchTerm.trim();
+    }
+    this.productsService.exportXlsx(params).subscribe({
+      next: (res) => {
+        try {
+          const byteCharacters = atob(res.base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: res.mime || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = res.filename || 'products.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          this.toastr.success('Products exported successfully');
+        } catch (e) {
+          console.error('Failed to download export file:', e);
+          this.toastr.error('Failed to download export file');
+        } finally {
+          this.exporting = false;
+        }
+      },
+      error: (err) => {
+        console.error('Export failed:', err);
+        this.toastr.error('Failed to export products');
+        this.exporting = false;
       }
     });
   }

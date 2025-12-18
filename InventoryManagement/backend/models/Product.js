@@ -40,12 +40,7 @@ const productSchema = new mongoose.Schema({
     maxStockLevel: { type: Number, default: 100 },
     allowBackorder: { type: Boolean, default: false }
   },
-  supplier: {
-    name: { type: String, default: '' },
-    contact: { type: String, default: '' },
-    email: { type: String, default: '' },
-    phone: { type: String, default: '' }
-  },
+  supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
   status: { type: String, enum: ['active', 'inactive', 'discontinued'], default: 'active' },
   tags: [{ type: String }],
   notes: { type: String, default: '' },

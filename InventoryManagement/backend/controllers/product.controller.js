@@ -2,6 +2,7 @@ import Product from '../models/Product.js';
 import Category from '../models/Category.js';
 import Brand from '../models/Brand.js';
 import Stock from '../models/Stock.js';
+import Supplier from '../models/Supplier.js';
 import { parseFileToJson, jsonToWorkbook } from '../utils/csv.js';
 import { generateProductPdf } from '../utils/pdf.js';
 import fs from 'fs';
@@ -19,12 +20,49 @@ export async function createProduct(req, res, next) {
       body.images = req.files.images.map((f) => `/uploads/${f.filename}`);
     }
     const product = await Product.create(body);
+
+    // Keep Supplier.products reverse mapping in sync when a supplier is specified
+    if (product.supplier && String(product.supplier).trim() !== '') {
+      try {
+        await Supplier.findByIdAndUpdate(
+          product.supplier,
+          {
+            $addToSet: {
+              products: {
+                product: product._id,
+                sku: product.sku,
+                cost: product.cost ?? 0
+              }
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Failed to sync supplier.products on createProduct:', error);
+      }
+    }
+
     res.json({ success: true, data: product });
   } catch (e) { next(e); }
 }
 
 export async function listProducts(req, res, next) {
   try {
+    // One-time data clean-up: remove invalid string supplier values that break ObjectId casting
+    try {
+      await Product.collection.updateMany(
+        {
+          $or: [
+            { supplier: { $type: 'string' } }, // legacy empty-string values
+            { supplier: { $type: 'array' } },  // any array of supplier ids/strings
+            { supplier: { $type: 'object' } }  // legacy embedded supplier objects
+          ]
+        },
+        { $unset: { supplier: '' } }
+      );
+    } catch (cleanupError) {
+      console.error('Failed to normalize product.supplier values:', cleanupError);
+    }
+
     const { page = 1, limit = 10, q, category, brand } = req.query;
     const filter = {};
     if (q) {
@@ -41,10 +79,25 @@ export async function listProducts(req, res, next) {
       .populate('category', 'name')
       .populate('brand', 'name')
       .populate('variant', 'name')
+      .populate('supplier', 'name companyName')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .lean();
+
+    // Aggregate stock quantities per product so the list shows accurate stock
+    const productIds = data.map((item) => item._id);
+    const stockByProduct = {};
+    if (productIds.length > 0) {
+      const stockAgg = await Stock.aggregate([
+        { $match: { product: { $in: productIds } } },
+        { $group: { _id: '$product', qty: { $sum: '$qty' } } }
+      ]);
+      for (const s of stockAgg) {
+        stockByProduct[String(s._id)] = s.qty || 0;
+      }
+    }
+
     const mapped = data.map((item) => ({
       ...item,
       categoryName: item.category && typeof item.category === 'object' ? item.category.name : null,
@@ -52,7 +105,10 @@ export async function listProducts(req, res, next) {
       brandName: item.brand && typeof item.brand === 'object' ? item.brand.name : null,
       brand: item.brand && typeof item.brand === 'object' ? item.brand._id : item.brand,
       variantName: item.variant && typeof item.variant === 'object' ? item.variant.name : null,
-      variant: item.variant && typeof item.variant === 'object' ? item.variant._id : item.variant
+      variant: item.variant && typeof item.variant === 'object' ? item.variant._id : item.variant,
+      supplierName: item.supplier && typeof item.supplier === 'object' ? item.supplier.name : null,
+      supplier: item.supplier && typeof item.supplier === 'object' ? item.supplier._id : item.supplier,
+      stock: stockByProduct[String(item._id)] || 0
     }));
     res.json({ success: true, data: mapped, total, page: Number(page), limit: Number(limit) });
   } catch (e) { next(e); }
@@ -96,6 +152,7 @@ export async function getProduct(req, res, next) {
       .populate('category', 'name')
       .populate('brand', 'name')
       .populate('variant', 'name')
+      .populate('supplier', 'name companyName')
       .lean();
     if (!p) return res.status(404).json({ success: false, message: 'Not found' });
     const data = p && {
@@ -105,7 +162,9 @@ export async function getProduct(req, res, next) {
       brandName: p.brand && typeof p.brand === 'object' ? p.brand.name : null,
       brand: p.brand && typeof p.brand === 'object' ? p.brand._id : p.brand,
       variantName: p.variant && typeof p.variant === 'object' ? p.variant.name : null,
-      variant: p.variant && typeof p.variant === 'object' ? p.variant._id : p.variant
+      variant: p.variant && typeof p.variant === 'object' ? p.variant._id : p.variant,
+      supplierName: p.supplier && typeof p.supplier === 'object' ? p.supplier.name : null,
+      supplier: p.supplier && typeof p.supplier === 'object' ? p.supplier._id : p.supplier
     };
     
     // Auto-generate PDF if it doesn't exist or is outdated
@@ -128,14 +187,64 @@ export async function updateProduct(req, res, next) {
     if (req.files?.images) {
       body.images = req.files.images.map((f) => `/uploads/${f.filename}`);
     }
+    const existing = await Product.findById(req.params.id).lean();
     const p = await Product.findByIdAndUpdate(req.params.id, body, { new: true });
+
+    // Keep Supplier.products in sync when supplier changes
+    if (existing && p) {
+      const previousSupplier = existing.supplier && String(existing.supplier).trim() !== '' ? existing.supplier : null;
+      const nextSupplier = p.supplier && String(p.supplier).trim() !== '' ? p.supplier : null;
+
+      if (previousSupplier && (!nextSupplier || String(previousSupplier) !== String(nextSupplier))) {
+        try {
+          await Supplier.updateOne(
+            { _id: previousSupplier },
+            { $pull: { products: { product: p._id } } }
+          );
+        } catch (error) {
+          console.error('Failed to remove product from previous supplier on updateProduct:', error);
+        }
+      }
+
+      if (nextSupplier) {
+        try {
+          await Supplier.findByIdAndUpdate(
+            nextSupplier,
+            {
+              $addToSet: {
+                products: {
+                  product: p._id,
+                  sku: p.sku,
+                  cost: p.cost ?? 0
+                }
+              }
+            }
+          );
+        } catch (error) {
+          console.error('Failed to sync product to supplier on updateProduct:', error);
+        }
+      }
+    }
+
     res.json({ success: true, data: p });
   } catch (e) { next(e); }
 }
 
 export async function deleteProduct(req, res, next) {
   try {
-    await Product.findByIdAndDelete(req.params.id);
+    const id = req.params.id;
+    await Product.findByIdAndDelete(id);
+
+    // Remove product reference from any suppliers
+    try {
+      await Supplier.updateMany(
+        { 'products.product': id },
+        { $pull: { products: { product: id } } }
+      );
+    } catch (error) {
+      console.error('Failed to remove product from suppliers on deleteProduct:', error);
+    }
+
     res.json({ success: true });
   } catch (e) { next(e); }
 }
@@ -144,12 +253,71 @@ export async function importProducts(req, res, next) {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ success: false, message: 'No file uploaded' });
-    const rows = parseFileToJson(file.buffer);
-    const docs = await Product.insertMany(rows.map((r) => ({
-      name: r.name, sku: r.sku, barcode: r.barcode, uom: r.uom, cost: Number(r.cost || 0), price: Number(r.price || 0), description: r.description
-    })), { ordered: false });
-    res.json({ success: true, inserted: docs.length });
-  } catch (e) { next(e); }
+
+    const rows = parseFileToJson(file.buffer) || [];
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'No data found in file' });
+    }
+
+    const results = {
+      inserted: 0,
+      failed: 0,
+      errors: []
+    };
+
+    // Basic validation + per-row insert so we can report errors clearly
+    for (let index = 0; index < rows.length; index++) {
+      const r = rows[index] || {};
+      const rowNumber = index + 2; // assume header at row 1
+
+      // Validate required fields
+      if (!r.name || !r.sku) {
+        results.failed += 1;
+        results.errors.push({
+          row: rowNumber,
+          sku: r.sku,
+          message: 'Missing required fields: name and/or sku'
+        });
+        continue;
+      }
+
+      const doc = {
+        name: String(r.name).trim(),
+        sku: String(r.sku).trim(),
+        barcode: r.barcode ? String(r.barcode).trim() : undefined,
+        uom: r.uom ? String(r.uom).trim() : 'pcs',
+        cost: Number(r.cost || 0),
+        price: Number(r.price || 0),
+        description: r.description ? String(r.description).trim() : undefined
+      };
+
+      try {
+        await Product.create(doc);
+        results.inserted += 1;
+      } catch (err) {
+        results.failed += 1;
+        let message = 'Failed to save product';
+        if (err && err.code === 11000) {
+          message = 'Duplicate SKU or barcode';
+        } else if (err && err.message) {
+          message = err.message;
+        }
+        results.errors.push({
+          row: rowNumber,
+          sku: r.sku,
+          message
+        });
+      }
+    }
+
+    res.json({
+      success: results.inserted > 0,
+      ...results
+    });
+  } catch (e) {
+    next(e);
+  }
 }
 
 export async function generateProductPdfEndpoint(req, res, next) {
@@ -159,6 +327,7 @@ export async function generateProductPdfEndpoint(req, res, next) {
       .populate('category', 'name')
       .populate('brand', 'name')
       .populate('variant', 'name')
+      .populate('supplier', 'name companyName contact')
       .lean();
     
     if (!product) {
@@ -169,7 +338,10 @@ export async function generateProductPdfEndpoint(req, res, next) {
       ...product,
       categoryName: product.category && typeof product.category === 'object' ? product.category.name : null,
       brandName: product.brand && typeof product.brand === 'object' ? product.brand.name : null,
-      variantName: product.variant && typeof product.variant === 'object' ? product.variant.name : null
+      variantName: product.variant && typeof product.variant === 'object' ? product.variant.name : null,
+      supplierName: product.supplier && typeof product.supplier === 'object' ? product.supplier.name : null,
+      supplierCompanyName: product.supplier && typeof product.supplier === 'object' ? product.supplier.companyName : null,
+      supplierContact: product.supplier && typeof product.supplier === 'object' ? product.supplier.contact || {} : {}
     };
     
     const { pdfUrl, filepath } = await generateAndSaveProductPdf(productData);
@@ -200,13 +372,17 @@ export async function getProductPdf(req, res, next) {
         .populate('category', 'name')
         .populate('brand', 'name')
         .populate('variant', 'name')
+        .populate('supplier', 'name companyName contact')
         .lean();
       
       const fullProductData = {
         ...productData,
         categoryName: productData.category && typeof productData.category === 'object' ? productData.category.name : null,
         brandName: productData.brand && typeof productData.brand === 'object' ? productData.brand.name : null,
-        variantName: productData.variant && typeof productData.variant === 'object' ? productData.variant.name : null
+        variantName: productData.variant && typeof productData.variant === 'object' ? productData.variant.name : null,
+        supplierName: productData.supplier && typeof productData.supplier === 'object' ? productData.supplier.name : null,
+        supplierCompanyName: productData.supplier && typeof productData.supplier === 'object' ? productData.supplier.companyName : null,
+        supplierContact: productData.supplier && typeof productData.supplier === 'object' ? productData.supplier.contact || {} : {}
       };
       
       await generateAndSaveProductPdf(fullProductData);
@@ -227,7 +403,19 @@ export async function getProductPdf(req, res, next) {
 
 export async function exportProducts(req, res, next) {
   try {
-    const products = await Product.find().lean();
+    const { q, category, brand } = req.query;
+    const filter = {};
+    if (q) {
+      filter.$or = [
+        { name: new RegExp(q, 'i') },
+        { sku: new RegExp(q, 'i') },
+        { barcode: new RegExp(q, 'i') }
+      ];
+    }
+    if (category) filter.category = category;
+    if (brand) filter.brand = brand;
+
+    const products = await Product.find(filter).sort({ createdAt: -1 }).lean();
     const data = products.map((p) => ({ name: p.name, sku: p.sku, barcode: p.barcode, uom: p.uom, cost: p.cost, price: p.price, description: p.description }));
     const wb = jsonToWorkbook(data);
     const base64 = wb.toString('base64');

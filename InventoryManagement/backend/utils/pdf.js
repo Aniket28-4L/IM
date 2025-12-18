@@ -19,15 +19,24 @@ export function generateProductPdf(product) {
   doc.moveDown(0.5);
   doc.fontSize(11).font('Helvetica');
   
+  const supplierContact = product.supplierContact || {};
+  const supplierLineParts = [];
+  if (product.supplierName) supplierLineParts.push(product.supplierName);
+  if (product.supplierCompanyName) supplierLineParts.push(product.supplierCompanyName);
+  const supplierLine = supplierLineParts.join(' - ') || product.supplier?.name || '-';
+
   const info = [
     ['SKU:', product.sku || '-'],
     ['Barcode:', product.barcode || '-'],
     ['Category:', product.categoryName || product.category?.name || '-'],
     ['Brand:', product.brandName || product.brand?.name || '-'],
     ['Variant:', product.variantName || product.variant?.name || '-'],
+    ['Supplier:', supplierLine],
+    ['Supplier Email:', supplierContact.email || product.supplier?.contact?.email || '-'],
+    ['Supplier Phone:', supplierContact.phone || product.supplier?.contact?.phone || '-'],
     ['Unit:', product.uom || '-'],
-    ['Cost:', product.cost ? `$${product.cost.toFixed(2)}` : '-'],
-    ['Price:', product.price ? `$${product.price.toFixed(2)}` : '-'],
+    ['Cost:', typeof product.cost === 'number' ? `$${product.cost.toFixed(2)}` : '-'],
+    ['Price:', typeof product.price === 'number' ? `$${product.price.toFixed(2)}` : '-'],
     ['Status:', product.status || 'active']
   ];
   

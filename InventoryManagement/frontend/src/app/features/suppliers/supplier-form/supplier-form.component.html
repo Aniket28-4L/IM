@@ -55,7 +55,7 @@
         <label class="label">Website</label>
         <input class="input" type="url" formControlName="website" />
       </div>
-      <div class="md:col-span-2">
+      <div class="md:col-span-2" *ngIf="!inline">
         <label class="label">Products</label>
         <div *ngIf="productsLoading" class="text-sm text-gray-500">Loading products...</div>
         <div *ngIf="!productsLoading" class="space-y-2">

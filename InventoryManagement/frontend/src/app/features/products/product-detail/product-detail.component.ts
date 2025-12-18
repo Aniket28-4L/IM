@@ -230,87 +230,21 @@ export class ProductDetailComponent implements OnInit {
   }
 
   printLabel(): void {
-    if (!this.product?.barcode) {
+    if (!this.product) {
+      this.toastr.error('Product not loaded');
+      return;
+    }
+
+    if (!this.product.barcode) {
       this.toastr.error('Product must have a barcode to print label');
       return;
     }
-    
-    // Get the print label container
-    let printContainer = document.querySelector('.print-label-container') as HTMLElement;
-    
-    // If container doesn't exist, create it
-    if (!printContainer) {
-      printContainer = document.createElement('div');
-      printContainer.className = 'print-label-container';
-      document.body.appendChild(printContainer);
-      
-      // Populate it with label content
-      printContainer.innerHTML = `
-        <div class="product-label">
-          <div class="label-header">
-            <h2 class="label-product-name">${this.product?.name || 'Product Name'}</h2>
-            <p class="label-sku">SKU: ${this.product?.sku || '-'}</p>
-          </div>
-          <div class="label-barcodes">
-            <div class="label-barcode-item">
-              <app-barcode-preview type="code128" [value]="${this.product.barcode}"></app-barcode-preview>
-              <p class="label-barcode-text">${this.product.barcode}</p>
-            </div>
-            <div class="label-qr-item">
-              <app-barcode-preview type="qr" [value]="${this.getQrCodeValue()}"></app-barcode-preview>
-              <p class="label-qr-text">Scan for details</p>
-            </div>
-          </div>
-          <div class="label-footer">
-            <p class="label-price">${this.product?.price ? this.formatCurrency(this.product.price) : ''}</p>
-          </div>
-        </div>
-      `;
-    }
-    
-    // Make container available but off-screen for barcode rendering
-    printContainer.style.cssText = `
-      display: block !important;
-      position: fixed !important;
-      left: -9999px !important;
-      top: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      z-index: -1 !important;
-      background: white !important;
-      overflow: visible !important;
-      visibility: hidden !important;
-    `;
-    
-    // Wait for barcodes to render
-    setTimeout(() => {
-      const svg = printContainer.querySelector('svg');
-      const canvas = printContainer.querySelector('canvas');
-      
-      // Wait longer if barcodes aren't ready
-      const waitTime = (!svg && !canvas) ? 2000 : 1000;
-      
-      setTimeout(() => {
-        // Verify content
-        const label = printContainer.querySelector('.product-label');
-        if (!label) {
-          this.toastr.error('Label content not found');
-          return;
-        }
-        
-        // Add a class to mark it as ready for print
-        printContainer.classList.add('print-ready');
-        
-        // Trigger print
-        window.print();
-        
-        // Clean up after printing
-        setTimeout(() => {
-          printContainer.classList.remove('print-ready');
-          printContainer.style.cssText = 'display: none !important;';
-        }, 500);
-      }, waitTime);
-    }, 500);
+
+    // Reuse the existing barcode box component in the template.
+    // The print-only .print-label-container uses <app-barcode-preview>,
+    // and @media print CSS shows only that container during printing.
+    // Just trigger the browser print; Angular has already rendered the label.
+    window.print();
   }
 }
 

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ProductsService, Product } from '../../../core/services/products.service';
 import { CatalogService } from '../../../core/services/catalog.service';
+import { SuppliersService, Supplier } from '../../../core/services/suppliers.service';
 
 @Component({
   selector: 'app-product-form',
@@ -18,6 +19,7 @@ export class ProductFormComponent implements OnInit {
     category: [''],
     brand: [''],
     variant: [''],
+    supplier: [''],
     uom: ['pcs'],
     cost: [''],
     price: [''],
@@ -28,10 +30,13 @@ export class ProductFormComponent implements OnInit {
   categories: any[] = [];
   brands: any[] = [];
   variants: any[] = [];
+  suppliers: Supplier[] = [];
+  suppliersLoading = false;
   catalogLoading = false;
   loading = true;
   saving = false;
   productId: string | null = null;
+  showInlineSupplierForm = false;
   get isEditMode(): boolean { return !!this.productId; }
   get imageNames(): string[] { return this.images.map(f => f.name); }
 
@@ -39,6 +44,7 @@ export class ProductFormComponent implements OnInit {
     private fb: FormBuilder,
     private products: ProductsService,
     private catalog: CatalogService,
+    private suppliersService: SuppliersService,
     private route: ActivatedRoute,
     private router: Router,
     private toastr: ToastrService
@@ -57,7 +63,7 @@ export class ProductFormComponent implements OnInit {
   loadCatalog(): void {
     this.catalogLoading = true;
     let completed = 0;
-    const total = 3;
+    const total = 4;
     const checkComplete = () => {
       completed++;
       if (completed >= total) {
@@ -77,6 +83,19 @@ export class ProductFormComponent implements OnInit {
       next: (variants) => { this.variants = variants; checkComplete(); },
       error: () => { checkComplete(); }
     });
+
+    this.suppliersLoading = true;
+    this.suppliersService.list({ limit: 1000 }).subscribe({
+      next: (res) => {
+        this.suppliers = res.suppliers || [];
+        this.suppliersLoading = false;
+        checkComplete();
+      },
+      error: () => {
+        this.suppliersLoading = false;
+        checkComplete();
+      }
+    });
   }
 
   loadProduct(id: string): void {
@@ -89,6 +108,7 @@ export class ProductFormComponent implements OnInit {
           category: product.category || '',
           brand: product.brand || '',
           variant: (product as any).variant || '',
+          supplier: (product as any).supplier || '',
           uom: (product as any).uom || 'pcs',
           cost: product.cost != null ? String(product.cost) : '',
           price: product.price != null ? String(product.price) : '',
@@ -110,11 +130,16 @@ export class ProductFormComponent implements OnInit {
 
   onSubmit(): void {
     if (this.form.invalid) return;
-    const payload = {
+    const payload: any = {
       ...this.form.value,
       cost: this.form.value.cost ? Number(this.form.value.cost) : undefined,
       price: this.form.value.price ? Number(this.form.value.price) : undefined
     };
+
+    // Do not send empty supplier values to backend (avoids invalid ObjectId casting)
+    if (!payload.supplier) {
+      delete payload.supplier;
+    }
     this.saving = true;
     const request = this.productId
       ? this.products.update(this.productId, payload, this.images)
@@ -129,6 +154,16 @@ export class ProductFormComponent implements OnInit {
         this.saving = false;
       }
     });
+  }
+
+  onInlineSupplierSaved(supplier: Supplier): void {
+    if (!supplier) {
+      this.showInlineSupplierForm = false;
+      return;
+    }
+    this.suppliers.push(supplier);
+    this.form.patchValue({ supplier: supplier.id });
+    this.showInlineSupplierForm = false;
   }
 }
 

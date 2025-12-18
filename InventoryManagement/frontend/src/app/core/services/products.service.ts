@@ -9,6 +9,7 @@ export interface Product {
   barcode?: string;
   category?: string;
   brand?: string;
+  supplier?: string;
   price?: number;
   cost?: number;
   description?: string;
@@ -52,6 +53,26 @@ export class ProductsService {
     return this.api.delete<{ success: boolean }>(`/products/${id}`).pipe(map((res) => res.success !== false));
   }
 
+  import(file: File): Observable<{
+    success: boolean;
+    inserted: number;
+    failed?: number;
+    errors?: { row: number; sku?: string; message: string }[];
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.api.post<any>('/products/import', formData);
+  }
+
+  exportXlsx(params?: Record<string, unknown>): Observable<{
+    success: boolean;
+    filename: string;
+    mime: string;
+    base64: string;
+  }> {
+    return this.api.get<any>('/products/export/xlsx', params);
+  }
+
   stock(id: string): Observable<any[]> {
     return this.api.get<{ success: boolean; data: any[] }>(`/products/${id}/stock`).pipe(map((res) => res.data || []));
   }
@@ -69,7 +90,23 @@ export class ProductsService {
   private mapProduct(product: any): Product {
     if (!product) return product;
     const { _id, ...rest } = product;
-    return { id: _id || product.id, ...rest };
+    const mapped: any = { id: _id || product.id, ...rest };
+
+    // Normalise populated references to IDs for form usage
+    if (mapped.category && typeof mapped.category === 'object') {
+      mapped.category = mapped.category._id;
+    }
+    if (mapped.brand && typeof mapped.brand === 'object') {
+      mapped.brand = mapped.brand._id;
+    }
+    if (mapped.variant && typeof mapped.variant === 'object') {
+      mapped.variant = mapped.variant._id;
+    }
+    if (mapped.supplier && typeof mapped.supplier === 'object') {
+      mapped.supplier = mapped.supplier._id;
+    }
+
+    return mapped as Product;
   }
 }
 

@@ -51,6 +51,19 @@
         <div class="text-sm text-gray-500">Brand</div>
         <div class="col-span-2 text-sm text-gray-800">{{ product.brandName || '-' }}</div>
       </div>
+      <div class="grid grid-cols-3 gap-2 py-2 border-b last:border-b-0" *ngIf="product.supplierName">
+        <div class="text-sm text-gray-500">Supplier</div>
+        <div class="col-span-2 text-sm text-gray-800">
+          <div class="font-medium">{{ product.supplierName }}</div>
+          <div *ngIf="product.supplier && product.supplier.companyName" class="text-xs text-gray-600">
+            {{ product.supplier.companyName }}
+          </div>
+          <div *ngIf="product.supplier && (product.supplier.contact?.email || product.supplier.contact?.phone)" class="mt-1 text-xs text-gray-600 space-y-0.5">
+            <div *ngIf="product.supplier.contact?.email">Email: {{ product.supplier.contact.email }}</div>
+            <div *ngIf="product.supplier.contact?.phone">Phone: {{ product.supplier.contact.phone }}</div>
+          </div>
+        </div>
+      </div>
       <div>
         <div class="label mb-1">Description</div>
         <div class="text-sm text-gray-700 whitespace-pre-line">{{ product.description || 'No description provided.' }}</div>
@@ -210,7 +223,7 @@
 </div>
 
 <!-- Print-only label section -->
-<div class="print-label-container" style="display: none !important;">
+<div class="print-label-container" style="display: none;">
   <div class="product-label">
     <div class="label-header">
       <h2 class="label-product-name">{{ product?.name || 'Product Name' }}</h2>
