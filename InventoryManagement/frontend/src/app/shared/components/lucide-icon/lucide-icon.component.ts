@@ -3,7 +3,8 @@ import { createElement } from 'lucide';
 import { 
   LayoutDashboard, Package, Box, Building2, ScanLine, ArrowLeftRight, 
   Users, BarChart, Settings, Plus, Edit, Edit2, Trash2, Download, 
-  Upload, Menu, Search, AlertTriangle, Activity, Bell, Printer
+  Upload, Menu, Search, AlertTriangle, Activity, Bell, Printer,
+  ShoppingCart, Receipt
 } from 'lucide';
 
 @Component({
@@ -42,6 +43,8 @@ export class LucideIconComponent implements OnInit, OnChanges, AfterViewInit {
       'activity': Activity,
       'bell': Bell,
       'printer': Printer
+      , 'shopping-cart': ShoppingCart
+      , 'receipt': Receipt
     };
     
     // Debug: Log available icons to verify imports

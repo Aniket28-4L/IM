@@ -44,6 +44,9 @@ import { UsersListComponent } from './features/users/users-list/users-list.compo
 import { UserFormComponent } from './features/users/user-form/user-form.component';
 import { ReportTableComponent } from './features/reports/report-table/report-table.component';
 import { ReportsActivityComponent } from './features/reports/reports-activity/reports-activity.component';
+import { SalesPageComponent } from './features/sales/sales-page/sales-page.component';
+import { SalesHistoryComponent } from './features/sales/sales-history/sales-history.component';
+import { InvoiceViewComponent } from './features/sales/invoice-view/invoice-view.component';
 
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 
@@ -83,6 +86,9 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor';
     UserFormComponent,
     ReportTableComponent,
     ReportsActivityComponent
+    ,SalesPageComponent
+    ,SalesHistoryComponent
+    ,InvoiceViewComponent
   ],
   imports: [
     BrowserModule,

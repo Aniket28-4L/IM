@@ -133,3 +133,58 @@ export function generateLabelsPdf(labels = [], options = { paper: 'A4' }) {
   });
 }
 
+export function generateInvoicePdf(order) {
+  const doc = new PDFDocument({ size: 'A4', margin: 50 })
+  const buffer = []
+  const title = 'Invoice'
+  const num = order.orderNumber || ''
+  const dateStr = new Date(order.orderDate || Date.now()).toLocaleDateString()
+  doc.fontSize(18).font('Helvetica-Bold').text(title, { align: 'center' })
+  doc.moveDown(0.5)
+  doc.fontSize(12).font('Helvetica').text(`Invoice Number: ${num}`)
+  doc.text(`Invoice Date: ${dateStr}`)
+  doc.moveDown(1)
+  const tableTop = doc.y
+  const colX = [50, 300, 380, 460]
+  doc.font('Helvetica-Bold').text('Description', colX[0], tableTop)
+  doc.text('Quantity', colX[1], tableTop)
+  doc.text('Unit Price', colX[2], tableTop)
+  doc.text('Line Total', colX[3], tableTop)
+  doc.moveDown(0.5)
+  doc.font('Helvetica')
+  let y = doc.y
+  const items = order.items || []
+  items.forEach((it) => {
+    const qty = Number(it.quantity || 0)
+    const unit = Number(it.unitPrice || 0)
+    const line = Number((unit * qty * (1 - (Number(it.discount || 0) / 100))).toFixed(2))
+    doc.text(String(it.productName || ''), colX[0], y, { width: 230 })
+    doc.text(String(qty), colX[1], y)
+    doc.text(`$${unit.toFixed(2)}`, colX[2], y)
+    doc.text(`$${line.toFixed(2)}`, colX[3], y)
+    y += 20
+    if (y > doc.page.height - 120) {
+      doc.addPage()
+      y = 80
+      doc.font('Helvetica-Bold').text('Description', colX[0], y)
+      doc.text('Quantity', colX[1], y)
+      doc.text('Unit Price', colX[2], y)
+      doc.text('Line Total', colX[3], y)
+      doc.font('Helvetica')
+      y += 20
+    }
+  })
+  doc.moveTo(50, y + 5).lineTo(550, y + 5).stroke('#e5e7eb')
+  const grand = Number(order.total || items.reduce((s, it) => s + (Number(it.unitPrice || 0) * Number(it.quantity || 0) * (1 - (Number(it.discount || 0) / 100))), 0))
+  doc.font('Helvetica-Bold').text('Grand Total', 390, y + 15)
+  doc.text(`$${grand.toFixed(2)}`, 460, y + 15)
+  doc.on('data', (d) => buffer.push(d))
+  doc.on('end', () => {})
+  doc.end()
+  return new Promise((resolve) => {
+    const chunks = []
+    doc.on('data', (d) => chunks.push(d))
+    doc.on('end', () => resolve(Buffer.concat(chunks)))
+  })
+}
+

@@ -20,6 +20,7 @@ import stockTransferRoutes from './routes/stockTransfer.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import supplierRoutes from './routes/supplier.routes.js';
 import customerRoutes from './routes/customer.routes.js';
+import salesRoutes from './routes/sales.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -107,6 +108,7 @@ app.use('/api/stock-transfers', stockTransferRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/sales', salesRoutes);
 
 // 404 handler for unknown routes
 app.use('/api/*', (req, res) => {

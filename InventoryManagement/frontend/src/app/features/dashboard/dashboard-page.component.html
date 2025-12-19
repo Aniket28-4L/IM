@@ -7,10 +7,10 @@
     </div>
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <app-stat-card icon="package" title="Total Products" [value]="stats.totalProducts | number"></app-stat-card>
-    <app-stat-card icon="building-2" title="Warehouses" [value]="stats.totalWarehouses"></app-stat-card>
-    <app-stat-card icon="activity" title="Moves Today" [value]="stats.movesToday"></app-stat-card>
-    <app-stat-card icon="alert-triangle" title="Low Stock Items" [value]="stats.lowStockItems"></app-stat-card>
+    <app-stat-card icon="package" title="Total Products" [value]="stats.totalProducts | number" (click)="gotoProducts()" class="cursor-pointer"></app-stat-card>
+    <app-stat-card icon="building-2" title="Warehouses" [value]="stats.totalWarehouses" (click)="gotoWarehouses()" class="cursor-pointer"></app-stat-card>
+    <app-stat-card icon="activity" title="Moves Today" [value]="stats.movesToday" (click)="gotoStockHistory()" class="cursor-pointer"></app-stat-card>
+    <app-stat-card icon="alert-triangle" title="Low Stock Items" [value]="stats.lowStockItems" (click)="gotoLowStock()" class="cursor-pointer"></app-stat-card>
   </div>
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <div class="card p-4 lg:col-span-2">

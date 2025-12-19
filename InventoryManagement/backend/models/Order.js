@@ -13,7 +13,7 @@ const orderSchema = new mongoose.Schema({
   // Related entities
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
-  warehouse: { type: mongoose.Schema.Types.ObjectId, ref: 'Warehouse', required: true },
+  warehouse: { type: mongoose.Schema.Types.ObjectId, ref: 'Warehouse' },
   
   // Dates
   orderDate: { type: Date, default: Date.now },
@@ -112,6 +112,29 @@ const orderSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   lastModifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
+
+orderSchema.pre('validate', async function(next) {
+  try {
+    if (this.isNew && !this.orderNumber) {
+      const year = new Date().getFullYear();
+      let seq = Math.floor(Date.now() % 10000);
+      let attempts = 0;
+      while (attempts < 1000) {
+        const candidate = `INV-${year}-${String(seq).padStart(4, '0')}`;
+        const exists = await mongoose.models.Order.exists({ orderNumber: candidate });
+        if (!exists) { this.orderNumber = candidate; break; }
+        seq = (seq + 1) % 10000;
+        attempts++;
+      }
+      if (!this.orderNumber) {
+        this.orderNumber = `INV-${year}-${Date.now()}`;
+      }
+    }
+    next();
+  } catch (e) {
+    next(e);
+  }
+});
 
 orderSchema.index({ orderNumber: 1 });
 orderSchema.index({ type: 1, status: 1 });

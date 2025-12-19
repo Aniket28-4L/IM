@@ -27,6 +27,8 @@ export class SidebarComponent {
     { path: '/variants', label: 'Variants', icon: 'box', roles: ['Admin', 'Manager'] },
     { path: '/brands', label: 'Brands', icon: 'box', roles: ['Admin', 'Manager'] },
     { path: '/suppliers', label: 'Suppliers', icon: 'building-2', roles: ['Admin', 'Manager'] },
+    { path: '/sales', label: 'Sales', icon: 'shopping-cart', roles: ['Admin', 'Manager', 'Staff'] },
+    { path: '/sales/history', label: 'Sales History', icon: 'receipt', roles: ['Admin', 'Manager', 'Staff', 'Viewer'] },
     { path: '/barcodes/generate', label: 'Barcodes', icon: 'scan-line', roles: ['Admin', 'Manager', 'Staff', 'Viewer'] },
     { path: '/warehouses', label: 'Warehouses', icon: 'building-2', roles: ['Admin', 'Manager'] },
     { path: '/stock/transfer', label: 'Stock Transfer', icon: 'arrow-left-right', roles: ['Admin', 'Manager', 'Staff'] },

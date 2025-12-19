@@ -23,6 +23,9 @@ import { UsersListComponent } from './features/users/users-list/users-list.compo
 import { UserFormComponent } from './features/users/user-form/user-form.component';
 import { ReportTableComponent } from './features/reports/report-table/report-table.component';
 import { ReportsActivityComponent } from './features/reports/reports-activity/reports-activity.component';
+import { SalesPageComponent } from './features/sales/sales-page/sales-page.component';
+import { SalesHistoryComponent } from './features/sales/sales-history/sales-history.component';
+import { InvoiceViewComponent } from './features/sales/invoice-view/invoice-view.component';
 import { AuthGuard } from './core/guards/auth.guard';
 
 const routes: Routes = [
@@ -60,7 +63,10 @@ const routes: Routes = [
       { path: 'reports/warehouse', component: ReportTableComponent, data: { type: 'warehouse' } },
       { path: 'reports/movement', component: ReportTableComponent, data: { type: 'movement' } },
       { path: 'reports/low-stock', component: ReportTableComponent, data: { type: 'lowStock' } },
-      { path: 'reports/activity', component: ReportsActivityComponent }
+      { path: 'reports/activity', component: ReportsActivityComponent },
+      { path: 'sales', component: SalesPageComponent },
+      { path: 'sales/history', component: SalesHistoryComponent },
+      { path: 'sales/:id', component: InvoiceViewComponent }
     ]
   },
   { path: '**', redirectTo: '' }

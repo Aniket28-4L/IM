@@ -47,11 +47,21 @@ export class DashboardPageComponent implements OnInit {
           name: m.date || m.name || 'Day',
           moves: m.moves || 0
         }));
-        this.recentActivity = (data?.recent || []).map((log: any, idx: number) => ({
-          id: log._id || `${idx}`,
-          description: log.description || log.type || `Activity #${idx + 1}`,
-          timeAgo: this.timeAgo(log.timestamp || log.createdAt || new Date())
-        }));
+        this.recentActivity = (data?.recent || []).map((log: any, idx: number) => {
+          const type = String(log.type || '').toUpperCase();
+          const product = log.productName || log.product?.name || log.product || '';
+          let description = log.description || '';
+          if (!description) {
+            if (type === 'IN') description = `Product Added — ${product}`;
+            else if (type === 'OUT') description = `Product Sold — ${product}`;
+            else description = (type || `Activity #${idx + 1}`);
+          }
+          return {
+            id: log._id || `${idx}`,
+            description,
+            timeAgo: this.timeAgo(log.timestamp || log.createdAt || new Date())
+          };
+        });
         this.loading = false;
       },
       error: () => {
@@ -76,6 +86,11 @@ export class DashboardPageComponent implements OnInit {
   newTransfer(): void {
     this.router.navigate(['/stock/transfer']);
   }
+
+  gotoProducts(): void { this.router.navigate(['/products']); }
+  gotoWarehouses(): void { this.router.navigate(['/warehouses']); }
+  gotoStockHistory(): void { this.router.navigate(['/stock/logs']); }
+  gotoLowStock(): void { this.router.navigate(['/reports/low-stock']); }
 }
 
 
